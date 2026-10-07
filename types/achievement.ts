@@ -7,5 +7,6 @@ export interface Achievement {
   reward: string;
   rarity: AchievementRarity;
   earned: boolean;
+  unlockedAt?: string;
   earnedAt?: string;
 }

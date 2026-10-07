@@ -13,6 +13,11 @@ const rarityStyles: Record<AchievementRarity, { border: string; label: string }>
 
 export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement }) => {
   const rarityStyle = rarityStyles[achievement.rarity];
+  const unlockedAt = achievement.unlockedAt ?? achievement.earnedAt;
+  const unlockedDate =
+    unlockedAt && !Number.isNaN(Date.parse(unlockedAt))
+      ? new Date(unlockedAt).toLocaleDateString()
+      : unlockedAt;
 
   return (
     <View
@@ -68,9 +73,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement })
           className={`text-[8px] font-semibold tracking-[0.1em] ${
             achievement.earned ? 'text-emerald-200' : 'text-slate-500'
           }`}>
-          {achievement.earned
-            ? `EARNED${achievement.earnedAt ? ` · ${achievement.earnedAt}` : ''}`
-            : 'LOCKED'}
+          {achievement.earned ? `EARNED${unlockedDate ? ` · ${unlockedDate}` : ''}` : 'LOCKED'}
         </Text>
       </View>
     </View>

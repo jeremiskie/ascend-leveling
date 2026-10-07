@@ -1,12 +1,13 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { QuestListItem } from '../types/quest';
 import { QuestStatusBadge } from './QuestStatusBadge';
 
 interface QuestListItemCardProps {
   quest: QuestListItem;
+  onComplete?: (questId: string) => void;
 }
 
-export const QuestListItemCard: React.FC<QuestListItemCardProps> = ({ quest }) => {
+export const QuestListItemCard: React.FC<QuestListItemCardProps> = ({ quest, onComplete }) => {
   const progressPercent =
     quest.target > 0 ? Math.min(Math.max((quest.progress / quest.target) * 100, 0), 100) : 0;
   const progressColor =
@@ -31,10 +32,13 @@ export const QuestListItemCard: React.FC<QuestListItemCardProps> = ({ quest }) =
       <View className="gap-2">
         <View className="flex-row items-center justify-between">
           <Text className="text-[10px] font-medium tracking-[0.16em] text-slate-500">
-            {quest.category.toUpperCase()} OBJECTIVE
+            {quest.isAiGenerated ? 'AI QUEST · ' : ''}
+            {quest.category.toUpperCase()} · {quest.goalCategory.toUpperCase()}
           </Text>
           <Text className="text-xs tabular-nums text-slate-400">
-            {quest.progress}/{quest.target}
+            {quest.difficulty
+              ? `${quest.difficulty} · ${quest.estimatedMinutes} MIN`
+              : `${quest.progress}/${quest.target}`}
           </Text>
         </View>
         <View
@@ -51,6 +55,23 @@ export const QuestListItemCard: React.FC<QuestListItemCardProps> = ({ quest }) =
         <Text className="text-[10px] tracking-[0.12em] text-slate-500">QUEST REWARD</Text>
         <Text className="text-xs font-medium text-cyan-200">{quest.reward}</Text>
       </View>
+      {quest.status === 'inProgress' && onComplete ? (
+        <Pressable
+          accessibilityRole="button"
+          className="items-center rounded-lg border border-cyan-200/40 bg-cyan-300/[0.06] px-4 py-3 active:bg-cyan-300/15"
+          onPress={() => onComplete(quest.id)}>
+          <Text className="text-xs font-semibold tracking-[0.16em] text-cyan-100">
+            COMPLETE QUEST
+          </Text>
+        </Pressable>
+      ) : quest.status === 'completed' ? (
+        <View className="flex-row items-center gap-2 rounded-lg border border-emerald-300/25 bg-emerald-300/[0.05] px-4 py-3">
+          <Text className="text-sm font-semibold text-emerald-200">✓</Text>
+          <Text className="text-xs font-semibold tracking-[0.16em] text-emerald-200">
+            QUEST COMPLETED
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 };

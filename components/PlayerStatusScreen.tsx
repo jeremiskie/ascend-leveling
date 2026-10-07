@@ -10,6 +10,7 @@ interface PlayerStatusScreenProps {
   player: PlayerStatus;
   onBack?: () => void;
   onContinue?: () => void;
+  onAllocateStat?: (stat: PlayerStatKey) => void;
 }
 
 const statDescriptions: Record<PlayerStatKey, string> = {
@@ -25,6 +26,7 @@ export const PlayerStatusScreen: React.FC<PlayerStatusScreenProps> = ({
   player,
   onBack,
   onContinue,
+  onAllocateStat,
 }) => {
   const [attributes, setAttributes] = useState(player.attributes);
   const [availableStatPoints, setAvailableStatPoints] = useState(player.availableStatPoints);
@@ -34,6 +36,7 @@ export const PlayerStatusScreen: React.FC<PlayerStatusScreenProps> = ({
 
     setAttributes((current) => ({ ...current, [stat]: current[stat] + 1 }));
     setAvailableStatPoints((current) => current - 1);
+    onAllocateStat?.(stat);
   };
 
   return (

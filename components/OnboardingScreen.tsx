@@ -1,17 +1,40 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import type { PlayerClass, PlayerProfile } from '../types/player';
+import type {
+  ExperienceLevel,
+  PlayerClass,
+  PlayerGoal,
+  PlayerProfile,
+  PlayerSex,
+} from '../types/player';
 
-type OnboardingStep = 'name' | 'class' | 'agreement';
+type OnboardingStep = 'identity' | 'readiness' | 'class' | 'agreement';
 
 interface OnboardingScreenProps {
   onBack?: () => void;
   onComplete?: (profile: PlayerProfile) => void;
 }
 
-const steps: OnboardingStep[] = ['name', 'class', 'agreement'];
+const steps: OnboardingStep[] = ['identity', 'readiness', 'class', 'agreement'];
+const sexOptions: { value: PlayerSex; label: string }[] = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'intersex', label: 'Intersex' },
+  { value: 'preferNotToSay', label: 'Prefer not to say' },
+];
+const experienceOptions: { value: ExperienceLevel; label: string; detail: string }[] = [
+  { value: 'beginner', label: 'Beginner', detail: 'New or returning to regular training' },
+  { value: 'intermediate', label: 'Intermediate', detail: 'Regular training experience' },
+  { value: 'advanced', label: 'Advanced', detail: 'Consistent, established training practice' },
+];
+const goalOptions: { value: PlayerGoal; label: string }[] = [
+  { value: 'physical', label: 'Physical' },
+  { value: 'mental', label: 'Mental' },
+  { value: 'lifestyle', label: 'Lifestyle' },
+  { value: 'combat', label: 'Combat' },
+];
 const playerClasses: { name: PlayerClass; description: string }[] = [
   { name: 'Vanguard', description: 'Strength, discipline, and resolve.' },
   { name: 'Arcanist', description: 'Focus, knowledge, and adaptability.' },
@@ -19,28 +42,49 @@ const playerClasses: { name: PlayerClass; description: string }[] = [
 ];
 
 const stepTitles: Record<OnboardingStep, string> = {
-  name: 'REGISTER YOUR NAME',
+  identity: 'PLAYER PROFILE',
+  readiness: 'SAFETY & GOALS',
   class: 'CHOOSE YOUR CLASS',
   agreement: 'SYSTEM AGREEMENT',
 };
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onComplete }) => {
-  const [step, setStep] = useState<OnboardingStep>('name');
+  const [step, setStep] = useState<OnboardingStep>('identity');
   const [playerName, setPlayerName] = useState('');
+  const [ageInput, setAgeInput] = useState('');
+  const [sex, setSex] = useState<PlayerSex | null>(null);
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | null>(null);
+  const [goals, setGoals] = useState<PlayerGoal[]>([]);
+  const [hasSafetyConcern, setHasSafetyConcern] = useState<boolean | null>(null);
   const [playerClass, setPlayerClass] = useState<PlayerClass | null>(null);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
   const currentStepIndex = steps.indexOf(step);
+  const age = Number(ageInput);
   const canContinue =
-    (step === 'name' && playerName.trim().length > 0) ||
+    (step === 'identity' &&
+      playerName.trim().length > 0 &&
+      Number.isInteger(age) &&
+      age > 0 &&
+      age <= 120 &&
+      sex !== null) ||
+    (step === 'readiness' &&
+      experienceLevel !== null &&
+      goals.length > 0 &&
+      hasSafetyConcern !== null) ||
     (step === 'class' && playerClass !== null) ||
     (step === 'agreement' && hasAgreed);
 
   const handleContinue = () => {
     if (!canContinue) return;
 
-    if (step === 'name') {
+    if (step === 'identity') {
+      setStep('readiness');
+      return;
+    }
+
+    if (step === 'readiness') {
       setStep('class');
       return;
     }
@@ -50,9 +94,18 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
       return;
     }
 
-    if (!playerClass) return;
+    if (!playerClass || !sex || !experienceLevel || hasSafetyConcern === null) return;
 
-    const profile: PlayerProfile = { name: playerName.trim(), playerClass };
+    const profile: PlayerProfile = {
+      name: playerName.trim(),
+      playerClass,
+      age,
+      sex,
+      experienceLevel,
+      goals,
+      hasInjuryOrMedicalCondition: hasSafetyConcern,
+      safetyState: hasSafetyConcern ? 'ADAPTIVE' : 'SAFETY',
+    };
     onComplete?.(profile);
     setIsComplete(true);
   };
@@ -64,7 +117,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
     }
 
     if (step === 'class') {
-      setStep('name');
+      setStep('readiness');
+      return;
+    }
+
+    if (step === 'readiness') {
+      setStep('identity');
       return;
     }
 
@@ -104,13 +162,17 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
     <SafeAreaView className="flex-1 bg-[#05070D]">
       <StatusBar style="light" />
       <View className="flex-1 justify-between px-7 py-8">
-        <View className="gap-8">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-8 pb-6"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
           <View className="flex-row items-center justify-between">
             <Text className="text-xs font-semibold tracking-[0.3em] text-cyan-200">
               SYSTEM // ONBOARDING
             </Text>
             <Text className="text-[10px] tracking-[0.2em] text-slate-500">
-              0{currentStepIndex + 1} / 03
+              0{currentStepIndex + 1} / 04
             </Text>
           </View>
 
@@ -134,10 +196,11 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
             </Text>
           </View>
 
-          {step === 'name' && (
+          {step === 'identity' && (
             <View className="gap-4">
               <Text className="text-sm leading-6 text-slate-400">
-                The System requires a name to identify its new player.
+                Set up your player profile. Your age and sex are used only to contextualize this
+                prototype.
               </Text>
               <TextInput
                 accessibilityLabel="Player name"
@@ -151,6 +214,138 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
                 returnKeyType="done"
                 value={playerName}
               />
+              <TextInput
+                accessibilityLabel="Age"
+                className="rounded-lg border border-cyan-200/30 bg-cyan-300/[0.04] px-4 py-4 text-base text-white"
+                keyboardType="number-pad"
+                maxLength={3}
+                onChangeText={(value) => setAgeInput(value.replace(/[^0-9]/g, ''))}
+                placeholder="Age"
+                placeholderTextColor="#64748B"
+                value={ageInput}
+              />
+              <Text className="text-xs font-medium tracking-[0.14em] text-slate-400">SEX</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {sexOptions.map((option) => {
+                  const selected = sex === option.value;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      className={`rounded-lg border px-3 py-3 ${
+                        selected
+                          ? 'border-cyan-200/60 bg-cyan-300/[0.08]'
+                          : 'border-slate-800 bg-slate-950/40'
+                      }`}
+                      onPress={() => setSex(option.value)}>
+                      <Text className={`text-xs ${selected ? 'text-cyan-100' : 'text-slate-300'}`}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {step === 'readiness' && (
+            <View className="gap-5">
+              <View className="gap-3">
+                <Text className="text-xs font-medium tracking-[0.14em] text-slate-400">
+                  TRAINING EXPERIENCE
+                </Text>
+                {experienceOptions.map((option) => {
+                  const selected = experienceLevel === option.value;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      className={`gap-1 rounded-lg border px-4 py-3 ${
+                        selected
+                          ? 'border-cyan-200/60 bg-cyan-300/[0.08]'
+                          : 'border-slate-800 bg-slate-950/40'
+                      }`}
+                      onPress={() => setExperienceLevel(option.value)}>
+                      <Text
+                        className={`text-sm font-semibold ${selected ? 'text-cyan-100' : 'text-slate-200'}`}>
+                        {option.label}
+                      </Text>
+                      <Text className="text-xs text-slate-500">{option.detail}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View className="gap-3">
+                <Text className="text-xs font-medium tracking-[0.14em] text-slate-400">
+                  YOUR GOALS · SELECT ALL THAT APPLY
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {goalOptions.map((option) => {
+                    const selected = goals.includes(option.value);
+                    return (
+                      <Pressable
+                        key={option.value}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selected }}
+                        className={`rounded-lg border px-4 py-3 ${
+                          selected
+                            ? 'border-cyan-200/60 bg-cyan-300/[0.08]'
+                            : 'border-slate-800 bg-slate-950/40'
+                        }`}
+                        onPress={() =>
+                          setGoals((current) =>
+                            selected
+                              ? current.filter((goal) => goal !== option.value)
+                              : [...current, option.value]
+                          )
+                        }>
+                        <Text
+                          className={`text-xs ${selected ? 'text-cyan-100' : 'text-slate-300'}`}>
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View className="gap-3">
+                <Text className="text-xs font-medium tracking-[0.14em] text-slate-400">
+                  SAFETY CHECK
+                </Text>
+                <Text className="text-sm leading-6 text-slate-400">
+                  Do you have an injury or medical condition that could affect physical activity?
+                  This is not a diagnosis; no details are requested.
+                </Text>
+                <View className="flex-row gap-3">
+                  {[
+                    { value: false, label: 'No limitations reported' },
+                    { value: true, label: 'Yes · adapt conservatively' },
+                  ].map((option) => {
+                    const selected = hasSafetyConcern === option.value;
+                    return (
+                      <Pressable
+                        key={option.label}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selected }}
+                        className={`flex-1 items-center rounded-lg border px-3 py-3 ${
+                          selected
+                            ? 'border-cyan-200/60 bg-cyan-300/[0.08]'
+                            : 'border-slate-800 bg-slate-950/40'
+                        }`}
+                        onPress={() => setHasSafetyConcern(option.value)}>
+                        <Text
+                          className={`text-center text-xs ${selected ? 'text-cyan-100' : 'text-slate-300'}`}>
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
             </View>
           )}
 
@@ -212,7 +407,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
               </Pressable>
             </View>
           )}
-        </View>
+        </ScrollView>
 
         <View className="gap-4">
           <Pressable
@@ -234,7 +429,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onBack, onCo
           </Pressable>
           <Pressable accessibilityRole="button" className="items-center py-2" onPress={handleBack}>
             <Text className="text-[10px] font-medium tracking-[0.2em] text-slate-500">
-              {step === 'name' ? 'BACK TO AWAKENING' : 'PREVIOUS STEP'}
+              {step === 'identity' ? 'BACK TO AWAKENING' : 'PREVIOUS STEP'}
             </Text>
           </Pressable>
         </View>
